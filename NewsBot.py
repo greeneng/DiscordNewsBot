@@ -194,11 +194,9 @@ news_channel = None
 message_history = []
 
 start_date = time.localtime()
-#start_date = time.struct_time((2000,12,31, 0,0,0, 0,0,0))
 last_date = start_date
 
 rt = PeriodicTask(rss_check, CHECK_TIMER)
-#rt = RepeatedTimer(CHECK_TIMER, rss_check) # initialize timer for check RSS-feed
 #rss_check()
 
 @client.event
@@ -215,11 +213,10 @@ async def on_ready():
     news_channel = discord.utils.get(guild.text_channels, name = CHANNEL_NAME)
     print("Channel: ", news_channel)
 
-    #message_history = get_channel_history(news_channel, BOT_USER_ID, MAX_HISTORY) # check only messages by bot
+    #message_history = await get_channel_history(news_channel, BOT_USER_ID, MAX_HISTORY) # check only messages by bot
     message_history = await get_channel_history(news_channel, 0, MAX_HISTORY) # check all messages (e.g. in case another bot or manual posting were used before)
     last_date = message_history[0].created_at.timetuple()
     await rt.start()
-    #print("Last news:", message_history)
 
 async def get_channel_history(channel, user_id = 0, limit = MAX_HISTORY):
     result = []
