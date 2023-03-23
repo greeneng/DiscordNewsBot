@@ -70,7 +70,7 @@ async def rss_check():
     for item in entries:
         publish_date = item.published_parsed
         if publish_date > last_date:
-            header = "`**" + item.title + "**"
+            header = "**" + item.title + "**"
             link = item.link
             raw_html = item.summary # should return sanitized html
             full_msg = header + "\n" + raw_html + "\nNews link: " + link
