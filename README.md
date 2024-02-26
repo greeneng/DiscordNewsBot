@@ -1,4 +1,6 @@
 # DiscordNewsBot
+Simple RSS feeds reposter for Discord servers
+
 This script uses Discord API for Python to make simple bot that reposts RSS news on the server.
 
 HTML/XML is converted to Discord's markdown format to preserve formatting as much as possible. 
