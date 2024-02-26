@@ -7,13 +7,13 @@ import re
 # Discord settings
 BOT_TOKEN = 'OTcxMzc3MTU3OTUzNjkxNjk4.YnJneQ.r58fSM9PK4HP9so2TA34noa5774'
 BOT_USER_ID = 971377157953691698
-SERVER_ID = 780369833283813427
-CHANNEL_ID = 780803869402988565
+SERVER_ID = 
+CHANNEL_ID = 
 CHANNEL_NAME = "news"
 MAX_HISTORY = 100
 
 # RSS settings
-RSS_FEED = 'http://blackspeech.ru/board/extern.php?action=feed&fid=3&type=rss'
+RSS_FEED = '' # URI to RSS feed source
 CHECK_TIMER = 600 # time in seconds between RSS checks
 
 # timer for repeated RSS check
@@ -61,7 +61,6 @@ async def rss_check():
         return False
     
     entries = feedparser.parse(RSS_FEED).entries
-    #print(entries)
     if (entries is None) or not entries:
         return False
    
@@ -73,7 +72,24 @@ async def rss_check():
             header = "**" + item.title + "**"
             link = item.link
             raw_html = item.summary # should return sanitized html
-            full_msg = header + "\n" + raw_html + "\nNews link: " + link
+            
+            # different types of news defined by tags: e.g. regular news or announcements, new software release, articles that are not news
+            is_news = False
+            is_software_update = False          
+            for tag in item.tags:
+                if tag.term == "news":
+                    is_news = True
+                elif tag.term == "bssscribe":
+                    is_software_update = True
+            
+            #different format for different types of news
+            if is_news:
+                full_msg = header + "\n" + raw_html + "\nNews link: " + link
+            elif is_software_update:
+                full_msg = header + "\nRelease notes: " + link
+            else:
+                full_msg = "New article: " + header + "\n" + cut_preview(raw_html) + "...\nRead more: " + link
+            
             msg_list = prepare_html(full_msg)
             for msg in msg_list:
                 print(msg)
@@ -90,18 +106,21 @@ def match_to_int(match):
 
 #convert raw HTML to Discord markdown
 def html_to_markdown(data):
+    pattern = "<a href=\"([A-Za-z0-9_%.:;=&\/\?\-]*?)\"[^>]*?><img .*? src=\"(.*?)\".*?><\/a>" # replace clickable images
+    result = re.sub(pattern, r" (\2) ", data, flags=re.I)
+    
     pattern = "<a href=\"(.*?)\".*?>(.*?)<\\/a>" # replace links
-    result = re.sub(pattern, r"\2 (\1) ", data, flags=re.I)
+    result = re.sub(pattern, r"\2 (\1) ", result, flags=re.I)
 
     pattern = "<img .*? src=\"(.*?)\".*?>" # replace images
-    result = re.sub(pattern, r" {{\1}} ", result, flags=re.I)
+    result = re.sub(pattern, r" (\1) ", result, flags=re.I)
 
     pattern = "<b>(.*?)<\\/b>" # replace <B> tags
     result = re.sub(pattern, r"**\1**", result, flags=re.I)
     pattern = "<strong>(.*?)<\\/strong>" # replace <STRONG> tags
     result = re.sub(pattern, r"**\1**", result, flags=re.I)
     pattern = "/<h\\d>(.*?)<\\/h\\d>/gm" # replace header tags
-    result = re.sub(pattern, r"**\1**", result, flags=re.I)
+    result = re.sub(pattern, r"**\1**\n", result, flags=re.I)
     pattern = "<cite>(.*?)<\\/cite>" # replace <CITE> tags
     result = re.sub(pattern, r"**\1**", result, flags=re.I)
 
@@ -130,7 +149,7 @@ def html_to_markdown(data):
     result = re.sub(pattern, r"\n```\2```\n", result, flags=re.I)
 
     pattern = "<p>(.*?)<\\/p>" # replace <P> tags
-    result = re.sub(pattern, r"\1\n", result, flags=re.I)
+    result = re.sub(pattern, r"\1\n\n", result, flags=re.I)
     pattern = "<br\\s?/?>" # line-breaks
     result = re.sub(pattern, r"\n", result, flags=re.I)
 
@@ -141,10 +160,12 @@ def html_to_markdown(data):
     result = re.sub(pattern, match_to_int, result)
     pattern = "&quot;" # html-entities
     result = re.sub(pattern, '"', result)
+    pattern = "&nbsp;" # html-entities
+    result = re.sub(pattern, ' ', result)
 
     return result
 
-# split long message in chunks of 2000 symbols, return as list
+# split long message in chunks of 2000 symbols avoiding spliting between format codes, return as list
 def split_message(message):
     result = message
     result_arr = []
@@ -186,6 +207,13 @@ def split_message(message):
 def prepare_html(html):
     return split_message(html_to_markdown(html))  
 
+# get text until "more" tag
+def cut_preview(message):
+    chunks = re.split('<span>\s*<a name="more"></a>\s*</span>', message, 1)
+    return chunks[0]
+
+# MAIN
+
 # start Discord bot
 intents = discord.Intents.default()
 client = discord.Client(intents=intents)
@@ -213,7 +241,6 @@ async def on_ready():
     news_channel = discord.utils.get(guild.text_channels, name = CHANNEL_NAME)
     print("Channel: ", news_channel)
 
-    #message_history = await get_channel_history(news_channel, BOT_USER_ID, MAX_HISTORY) # check only messages by bot
     message_history = await get_channel_history(news_channel, 0, MAX_HISTORY) # check all messages (e.g. in case another bot or manual posting were used before)
     last_date = message_history[0].created_at.timetuple()
     await rt.start()
@@ -226,5 +253,4 @@ async def get_channel_history(channel, user_id = 0, limit = MAX_HISTORY):
     return result
 
 loop = asyncio.get_event_loop()
-#loop.run_until_complete(main())
 client.run(BOT_TOKEN)
