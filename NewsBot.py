@@ -5,8 +5,8 @@ import time
 import re
 
 # Discord settings
-BOT_TOKEN = 'OTcxMzc3MTU3OTUzNjkxNjk4.YnJneQ.r58fSM9PK4HP9so2TA34noa5774'
-BOT_USER_ID = 971377157953691698
+BOT_TOKEN = ''
+BOT_USER_ID = 
 SERVER_ID = 
 CHANNEL_ID = 
 CHANNEL_NAME = "news"
